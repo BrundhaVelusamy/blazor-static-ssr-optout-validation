@@ -1,0 +1,104 @@
+﻿@page "/"
+@inject IConfiguration Configuration
+
+<PageTitle>Static SSR validation opt-outs</PageTitle>
+
+<h1>Static SSR validation opt-outs</h1>
+
+<p>
+    App-wide client validation opt-out:
+    <strong>@(Configuration.GetValue<bool>("DisableClientValidation") ? "on" : "off")</strong>
+</p>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <h2>Default client validation</h2>
+
+        <EditForm Model="DefaultModel" FormName="default-validation"
+                  OnValidSubmit="HandleDefaultValidSubmit"
+                  OnInvalidSubmit="HandleDefaultInvalidSubmit">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="default-name" class="form-label">Name</label>
+                <InputText id="default-name" class="form-control" @bind-Value="DefaultModel.Name" />
+                <ValidationMessage For="() => DefaultModel.Name" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit default form</button>
+        </EditForm>
+
+        @if (defaultResult is not null)
+        {
+            <div class="alert @(defaultSucceeded ? "alert-success" : "alert-danger") mt-3" role="status">
+                @defaultResult
+            </div>
+        }
+    </div>
+
+    <div class="col-md-6">
+        <h2>Per-form client validation opt-out</h2>
+
+        <EditForm Model="OptedOutModel" FormName="opted-out-validation"
+                  OnValidSubmit="HandleOptedOutValidSubmit"
+                  OnInvalidSubmit="HandleOptedOutInvalidSubmit">
+            <DataAnnotationsValidator DisableClientValidation="true" />
+
+            <div class="mb-3">
+                <label for="opted-out-name" class="form-label">Name</label>
+                <InputText id="opted-out-name" class="form-control" @bind-Value="OptedOutModel.Name" />
+                <ValidationMessage For="() => OptedOutModel.Name" />
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit opted-out form</button>
+        </EditForm>
+
+        @if (optedOutResult is not null)
+        {
+            <div class="alert @(optedOutSucceeded ? "alert-success" : "alert-danger") mt-3" role="status">
+                @optedOutResult
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm(FormName = "default-validation", Name = "DefaultModel")]
+    private ValidationSample? SuppliedDefaultModel { get; set; }
+
+    [SupplyParameterFromForm(FormName = "opted-out-validation", Name = "OptedOutModel")]
+    private ValidationSample? SuppliedOptedOutModel { get; set; }
+
+    private ValidationSample DefaultModel => SuppliedDefaultModel ??= new();
+
+    private ValidationSample OptedOutModel => SuppliedOptedOutModel ??= new();
+
+    private string? defaultResult;
+    private bool defaultSucceeded;
+    private string? optedOutResult;
+    private bool optedOutSucceeded;
+
+    private void HandleDefaultValidSubmit()
+    {
+        defaultSucceeded = true;
+        defaultResult = $"Server accepted '{DefaultModel.Name}'.";
+    }
+
+    private void HandleDefaultInvalidSubmit()
+    {
+        defaultSucceeded = false;
+        defaultResult = "The default form reached the server and failed server validation.";
+    }
+
+    private void HandleOptedOutValidSubmit()
+    {
+        optedOutSucceeded = true;
+        optedOutResult = $"Server accepted '{OptedOutModel.Name}'.";
+    }
+
+    private void HandleOptedOutInvalidSubmit()
+    {
+        optedOutSucceeded = false;
+        optedOutResult = "The opted-out form reached the server and failed server validation.";
+    }
+}
